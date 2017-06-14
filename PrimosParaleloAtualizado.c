@@ -26,14 +26,14 @@ main(int argc, char **argv){
 	int tam; 	/* Último número que será verificado */
 	MPI_Status status; //Definindo a variável "status"
 	int ierr, my_id, num_procs; //Definições para o paralelismo
-
+  int verificou;
 	/* Deste ponto em diante, este processo cria processos paralelos com cópias deste programa.*/
 	ierr = MPI_Init(&argc, &argv);
 	/* Encontrando o ID do processo e quantos processos foram criados */
       	/* find out MY process ID, and how many processes were started. */
       	ierr = MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
       	ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-
+    verificou = 0;
     //Garantindo que todo o vetor tenha valor 0 em suas posições
     for(tam=0; tam<max_lin; tam++){
         primos[tam]=0;
@@ -160,14 +160,15 @@ main(int argc, char **argv){
 
             //printf("Recebido o valor %i no processo %i\n", num_teste, my_id);
             int primo = 0; //Inicialmente todos os números são primos
-            if(num_teste < (num_procs*2)){ //Neste caso faremos o teste para o número primo com
-                                           //todos os números menores que ele
+            //if(num_teste < (num_procs-1)){ //Neste caso faremos o teste para o número primo com
+            if (verificou == 0) {                               //todos os números menores que ele
 
                 for ( pos = 0; pos < ult_enviado; pos++){ //Rotina para testar se o número é primo ou não com os numeros que estão no outro processo
                   if (vetNumerosEnviados[pos] < num_teste){
                     if((num_teste % vetNumerosEnviados[pos])==0) primo=1; // Se der resto 0 não é primo
                   }
                 }
+                verificou = 1;
         //        for(pos=2;pos<num_teste;pos++)
         //            if((num_teste % pos)==0) primo=1;
             }else{
