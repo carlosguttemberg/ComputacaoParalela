@@ -64,6 +64,7 @@ main(int argc, char **argv){
     int vetNumerosEnviados[num_procs];
     int vetorCache[num_procs - 1];
     int contaPrimo = 0;
+    int enviaVetor = 1;
 		//Enviando o próximo número para os processos escravos criados
 		int processo=0;
 
@@ -74,7 +75,7 @@ main(int argc, char **argv){
 
       //LOOP PARA PREENCHER O VETOR QUE IRÁ CONTER OS VALORES QUE ESTÃO SENDO DIVIDIDOS PELOS OUTROS PROCESSOS
       //ELE IRÁ EXECUTAR SEMPRE QUE O CICLO DE ENVIO REINICIAR
-      if(num_teste < (num_procs*2)){
+      if(enviaVetor <= num_procs - 1){
         if (processo == 1){
           ult_enviado = 0;
           for ( posicao = 0; posicao < num_procs; posicao++){
@@ -89,9 +90,13 @@ main(int argc, char **argv){
         }
       }
 
-      ierr = MPI_Send(&ult_enviado, 1, MPI_INT, processo, envio_tamanho, MPI_COMM_WORLD);
+      if(enviaVetor <= num_procs - 1){
+        ierr = MPI_Send(&ult_enviado, 1, MPI_INT, processo, envio_tamanho, MPI_COMM_WORLD);
 
-      ierr = MPI_Send(&vetNumerosEnviados[0], ult_enviado , MPI_INT, processo, envio_vetor, MPI_COMM_WORLD);
+        ierr = MPI_Send(&vetNumerosEnviados[0], ult_enviado , MPI_INT, processo, envio_vetor, MPI_COMM_WORLD);
+
+        enviaVetor++;
+      }
 
             //printf("Enviando %d para o processo %d  -> ", num_teste, processo);
 			ierr = MPI_Send(&num_teste, 1 , MPI_INT, processo, envio_prox_num, MPI_COMM_WORLD);
@@ -166,13 +171,13 @@ main(int argc, char **argv){
             pos=1;
             posicaoEnviado = 1;
 
+            if (verificou == 0){
+              //Recebendo o tamanho do vetor de ENVIADOS
+              ierr = MPI_Recv( &ult_enviado, 1, MPI_INT, proc_raiz, envio_tamanho, MPI_COMM_WORLD, &status);
 
-            //Recebendo o tamanho do vetor de ENVIADOS
-            ierr = MPI_Recv( &ult_enviado, 1, MPI_INT, proc_raiz, envio_tamanho, MPI_COMM_WORLD, &status);
-
-            //RECEBENDO OS NÚMEROS QUE ESTÃO SENDO DIVIDIDOS NOS OUTROS PROCESSOS
-            ierr = MPI_Recv( &vetNumerosEnviados[0], ult_enviado, MPI_INT, proc_raiz, envio_vetor, MPI_COMM_WORLD, &status);
-
+              //RECEBENDO OS NÚMEROS QUE ESTÃO SENDO DIVIDIDOS NOS OUTROS PROCESSOS
+              ierr = MPI_Recv( &vetNumerosEnviados[0], ult_enviado, MPI_INT, proc_raiz, envio_vetor, MPI_COMM_WORLD, &status);
+            }
 
             //Recebendo os números do processo Raiz para testar
             ierr = MPI_Recv( &num_teste, 1, MPI_INT, proc_raiz, envio_prox_num, MPI_COMM_WORLD, &status);
