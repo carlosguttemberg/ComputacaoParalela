@@ -111,7 +111,7 @@ main(int argc, char **argv){
                 }
 
                 contaPrimo = 0;
-                
+
                 for(processo=1; processo<num_procs; processo++){
                     ierr = MPI_Recv( &num_primo, 1, MPI_INT, MPI_ANY_SOURCE, ret_num_primo, MPI_COMM_WORLD, &status);
                     if(num_primo != 0){ //Trata-se de um número primo
@@ -137,6 +137,14 @@ main(int argc, char **argv){
                 processo = 0;
       }
 		}
+    for(processo=1; processo<num_procs; processo ++){ // Hora de enviar aos processos escravos
+                                                      // o novo vetor de números primos
+        num_teste = 0;
+        ierr = MPI_Send(&num_teste, 1 , MPI_INT, processo, envio_prox_num, MPI_COMM_WORLD);
+    }
+
+    fimTempo= clock();
+
        //Finalmente é hora de exibir os resultados do Vetor!
 	   //Exibindo os resultado
 	   for (pos=0; pos<=ult_primo; pos++)
@@ -145,7 +153,7 @@ main(int argc, char **argv){
 	     printf("Quantidade de primos encontrados: %d", ult_primo+1);
 
 	     /* Exibindo o tempo gasto na execução da aplicação */
-	     fimTempo= clock();
+
 	     printf("\n");
 	     printf("---------------------------------------------------------------------");
 	     printf("\n");
@@ -168,7 +176,7 @@ main(int argc, char **argv){
         int vetorCache[num_procs - 1];
         int contaPrimo = 0;
         int continua   = 1;
-        while(1){
+        while(continua == 1){
             pos=1;
             posicaoEnviado = 1;
 
@@ -183,6 +191,10 @@ main(int argc, char **argv){
             //Recebendo os números do processo Raiz para testar
             ierr = MPI_Recv( &num_teste, 1, MPI_INT, proc_raiz, envio_prox_num, MPI_COMM_WORLD, &status);
 
+            if (num_teste == 0){
+              continua = 0;
+              break;
+            }
             //printf("Recebido o valor %i no processo %i\n", num_teste, my_id);
             int primo = 0; //Inicialmente todos os números são primos
             //if(num_teste < (num_procs-1)){ //Neste caso faremos o teste para o número primo com
