@@ -62,6 +62,8 @@ main(int argc, char **argv){
     int posicao; //CONTROLAR A POSICAO EM QUE SE ENCONTRA O MEU VETOR COM OS NÚMEROS A SEREM DIVIDIDOS
     int aux;//VARIAVEL QUE IRA RECEBER O VALOR DO NUMERO QUE SERA ENVIADO
     int vetNumerosEnviados[num_procs];
+    int vetorCache[num_procs - 1];
+    int contaPrimo = 0;
 		//Enviando o próximo número para os processos escravos criados
 		int processo=0;
 
@@ -94,6 +96,12 @@ main(int argc, char **argv){
             //printf("Enviando %d para o processo %d  -> ", num_teste, processo);
 			ierr = MPI_Send(&num_teste, 1 , MPI_INT, processo, envio_prox_num, MPI_COMM_WORLD);
 
+      for (contaPrimo = 0; contaPrimo < num_procs -1; contaPrimo++){
+        vetorCache[contaPrimo] = 0;
+      }
+
+      contaPrimo = 0;
+
 			if(processo >= num_procs-1){ //Neste caso todos os processos já receberam um número
                                           //é hora de pegar os resultados
                                           //Como foi feito pode gerar DEADLOCK!!
@@ -102,20 +110,27 @@ main(int argc, char **argv){
                     ierr = MPI_Recv( &num_primo, 1, MPI_INT, MPI_ANY_SOURCE, ret_num_primo, MPI_COMM_WORLD, &status);
                     if(num_primo != 0){ //Trata-se de um número primo
                         ult_primo++;
-                        primos[ult_primo]=num_primo; //Adicionando o número primo ao vetor de primos
+                        primos[ult_primo] = num_primo; //Adicionando o número primo ao vetor de primos
+                        vetorCache[contaPrimo] = num_primo;
+                        contaPrimo ++;
                     }
                 }
-                for(processo=1; processo<num_procs; processo ++){ // Enviando o tamanho do vetor de primos
-                    ierr = MPI_Send(&ult_primo, 1, MPI_INT, processo, envio_tamanho, MPI_COMM_WORLD);
-                }
+
                 for(processo=1; processo<num_procs; processo ++){ // Hora de enviar aos processos escravos
                                                                   // o novo vetor de números primos
-                    ierr = MPI_Send(&primos[0], ult_primo, MPI_INT, processo, envio_vetor, MPI_COMM_WORLD);
+                    ierr = MPI_Send(&vetorCache[0], (num_procs - 1), MPI_INT, processo, envio_vetor, MPI_COMM_WORLD);
                 }
-                processo=0;
+
+              //  for(processo=1; processo<num_procs; processo ++){ // Enviando o tamanho do vetor de primos
+              //      ierr = MPI_Send(&ult_primo, 1, MPI_INT, processo, envio_tamanho, MPI_COMM_WORLD);
+              //  }
+              //  for(processo=1; processo<num_procs; processo ++){ // Hora de enviar aos processos escravos
+              //                                                    // o novo vetor de números primos
+              //      ierr = MPI_Send(&primos[0], ult_primo, MPI_INT, processo, envio_vetor, MPI_COMM_WORLD);
+              //  }
+                processo = 0;
       }
 		}
-
        //Finalmente é hora de exibir os resultados do Vetor!
 	   //Exibindo os resultado
 	   for (pos=0; pos<=ult_primo; pos++)
@@ -144,9 +159,13 @@ main(int argc, char **argv){
         int ult_enviado = 1;
         int posicaoEnviado = 1;
         int vetNumerosEnviados[num_procs];
+        int vetorCache[num_procs - 1];
+        int contaPrimo = 0;
+        int continua   = 1;
         while(1){
             pos=1;
             posicaoEnviado = 1;
+
 
             //Recebendo o tamanho do vetor de ENVIADOS
             ierr = MPI_Recv( &ult_enviado, 1, MPI_INT, proc_raiz, envio_tamanho, MPI_COMM_WORLD, &status);
@@ -172,20 +191,42 @@ main(int argc, char **argv){
         //        for(pos=2;pos<num_teste;pos++)
         //            if((num_teste % pos)==0) primo=1;
             }else{
-                while(primos[pos]!=0){ //Rotina para testar se o número é primo ou não
-                    if((num_teste % primos[pos])==0) primo=1; // Se der resto 0 não é primo
-                    pos++;
+              for (pos = 0; pos < contaPrimo; pos ++){
+                if(primos[pos] > 0){
+                  if((num_teste % primos[pos])==0) primo=1; // Se der resto 0 não é primo
                 }
+              }
+            //    while(primos[pos]!=0){ //Rotina para testar se o número é primo ou não
+            //        if((num_teste % primos[pos])==0) primo=1; // Se der resto 0 não é primo
+            //        pos++;
+            //    }
             }
 
-            if(primo==1) num_teste = 0; // O número não é primo, portanto retornarei 0
+            if(primo==1){
+              num_teste = 0; // O número não é primo, portanto retornarei 0
+            }// else {
+            //  primos[contaPrimo] = num_teste;
+            //  contaPrimo++;
+            //}
             //Enviando o primo para o processo raiz
             ierr = MPI_Send(&num_teste, 1, MPI_INT, proc_raiz, ret_num_primo, MPI_COMM_WORLD);
 
+            ierr = MPI_Recv( &vetorCache[0], (num_procs - 1), MPI_INT, proc_raiz, envio_vetor, MPI_COMM_WORLD, &status);
+
+            for(pos = 0; pos < num_procs - 1; pos++){
+              if (vetorCache[pos] != 0){
+                //if (my_id == 3){
+                //  printf("%d\n", vetorCache[pos]);
+                //}
+                primos[contaPrimo] = vetorCache[pos];
+                contaPrimo++;
+              }
+
+            }
             //Recebendo o tamanho do vetor de primos
-            ierr = MPI_Recv( &ult_primo, 1, MPI_INT, proc_raiz, envio_tamanho, MPI_COMM_WORLD, &status);
-            //Recebendo o novo vetor com os primos calculados
-            ierr = MPI_Recv( &primos[0], ult_primo, MPI_INT, proc_raiz, envio_vetor, MPI_COMM_WORLD, &status);
+            //ierr = MPI_Recv( &ult_primo, 1, MPI_INT, proc_raiz, envio_tamanho, MPI_COMM_WORLD, &status);
+            //Recebendo o novo vetor com os primos calculados int vetorCache[num_procs];
+            //ierr = MPI_Recv( &primos[0], ult_primo, MPI_INT, proc_raiz, envio_vetor, MPI_COMM_WORLD, &status);
         }
     }
 }
