@@ -101,16 +101,17 @@ main(int argc, char **argv){
             //printf("Enviando %d para o processo %d  -> ", num_teste, processo);
 			ierr = MPI_Send(&num_teste, 1 , MPI_INT, processo, envio_prox_num, MPI_COMM_WORLD);
 
-      for (contaPrimo = 0; contaPrimo < num_procs -1; contaPrimo++){
-        vetorCache[contaPrimo] = 0;
-      }
-
-      contaPrimo = 0;
-
 			if(processo >= num_procs-1){ //Neste caso todos os processos já receberam um número
                                           //é hora de pegar os resultados
                                           //Como foi feito pode gerar DEADLOCK!!
                                           //ou pode deixar de incluir alguns números primos!!
+
+                for (contaPrimo = 0; contaPrimo < num_procs -1; contaPrimo++){
+                  vetorCache[contaPrimo] = 0;
+                }
+
+                contaPrimo = 0;
+                
                 for(processo=1; processo<num_procs; processo++){
                     ierr = MPI_Recv( &num_primo, 1, MPI_INT, MPI_ANY_SOURCE, ret_num_primo, MPI_COMM_WORLD, &status);
                     if(num_primo != 0){ //Trata-se de um número primo
