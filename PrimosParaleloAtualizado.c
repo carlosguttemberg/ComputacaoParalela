@@ -89,7 +89,7 @@ main(int argc, char **argv){
           }
         }
       }
-
+      //VERIFICA SE TODOS OS PROCESSOS JA RECEBEU O VETOR DE NUMEORS QUE ESTAO NOS OUTROS PROCESSOS
       if(enviaVetor <= num_procs - 1){
         ierr = MPI_Send(&ult_enviado, 1, MPI_INT, processo, envio_tamanho, MPI_COMM_WORLD);
 
@@ -106,6 +106,7 @@ main(int argc, char **argv){
                                           //Como foi feito pode gerar DEADLOCK!!
                                           //ou pode deixar de incluir alguns números primos!!
 
+                //LIMPANDO O VETOR DE CACHE
                 for (contaPrimo = 0; contaPrimo < num_procs -1; contaPrimo++){
                   vetorCache[contaPrimo] = 0;
                 }
@@ -117,13 +118,13 @@ main(int argc, char **argv){
                     if(num_primo != 0){ //Trata-se de um número primo
                         ult_primo++;
                         primos[ult_primo] = num_primo; //Adicionando o número primo ao vetor de primos
-                        vetorCache[contaPrimo] = num_primo;
+                        vetorCache[contaPrimo] = num_primo; //adicionando o novo valor no vetor para ser enviado aos outros processos
                         contaPrimo ++;
                     }
                 }
 
                 for(processo=1; processo<num_procs; processo ++){ // Hora de enviar aos processos escravos
-                                                                  // o novo vetor de números primos
+                                                                  // os novos números primos
                     ierr = MPI_Send(&vetorCache[0], (num_procs - 1), MPI_INT, processo, envio_vetor, MPI_COMM_WORLD);
                 }
 
@@ -172,9 +173,13 @@ main(int argc, char **argv){
         int ult_primo = 1;
         int ult_enviado = 1;
         int posicaoEnviado = 1;
+        //VETOR QUE CONTEM OS NUMEROS QUE ESTAO SENDO PROCESSADOS NOS OUTROS PROCESSOS
         int vetNumerosEnviados[num_procs];
+        //VETOR COM OS NOVOS PRIMOS
         int vetorCache[num_procs - 1];
+        //CONTAGEM DE PRIMOS QUE O VETOR DE CADA PROCESSO POSSUI
         int contaPrimo = 0;
+        //FLAG PARA INTERROMPER A EXECUCAO DO LOOP DOS PROCESSOS ESCRAVOS
         int continua   = 1;
         while(continua == 1){
             pos=1;
@@ -191,6 +196,7 @@ main(int argc, char **argv){
             //Recebendo os números do processo Raiz para testar
             ierr = MPI_Recv( &num_teste, 1, MPI_INT, proc_raiz, envio_prox_num, MPI_COMM_WORLD, &status);
 
+            //VERIFICAÇÃO PARA INTERROMPER OS PROCESSOS ESCRAVOS
             if (num_teste == 0){
               continua = 0;
               break;
@@ -228,9 +234,10 @@ main(int argc, char **argv){
             //}
             //Enviando o primo para o processo raiz
             ierr = MPI_Send(&num_teste, 1, MPI_INT, proc_raiz, ret_num_primo, MPI_COMM_WORLD);
-
+            //RECEBENDO O VETOR COM OS NOVOS PRIMOS
             ierr = MPI_Recv( &vetorCache[0], (num_procs - 1), MPI_INT, proc_raiz, envio_vetor, MPI_COMM_WORLD, &status);
 
+            //PREENCHENDO O VETOR DE PRIMOS DE CADA PROCESSO ESCRAVO COM OS NOVOS NUMEROS PRIMOS
             for(pos = 0; pos < num_procs - 1; pos++){
               if (vetorCache[pos] != 0){
                 //if (my_id == 3){
