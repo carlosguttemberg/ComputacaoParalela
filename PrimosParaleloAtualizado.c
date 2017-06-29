@@ -69,13 +69,14 @@ main(int argc, char **argv){
 		int processo=0;
 
 		//Cada processo receberá o próximo número que será calculado
-		for (num_teste=2; num_teste<=tam; num_teste++){
+		for (num_teste=2; num_teste <= tam + num_procs - 1; num_teste++){
 			processo++;
       aux = num_teste + num_procs - 1;
 
       //LOOP PARA PREENCHER O VETOR QUE IRÁ CONTER OS VALORES QUE ESTÃO SENDO DIVIDIDOS PELOS OUTROS PROCESSOS
       //ELE IRÁ EXECUTAR SEMPRE QUE O CICLO DE ENVIO REINICIAR
       if(enviaVetor <= num_procs - 1){
+        ierr = MPI_Send(&tam, 1, MPI_INT, processo, envio_tamanho, MPI_COMM_WORLD);
         if (processo == 1){
           ult_enviado = 0;
           for ( posicao = 0; posicao < num_procs; posicao++){
@@ -148,6 +149,8 @@ main(int argc, char **argv){
 
        //Finalmente é hora de exibir os resultados do Vetor!
 	   //Exibindo os resultado
+     printf("\n");
+     printf("\n");
 	   for (pos=0; pos<=ult_primo; pos++)
        printf("%d ", primos[pos]);
 	     printf("\n");
@@ -181,17 +184,21 @@ main(int argc, char **argv){
         int contaPrimo = 0;
         //FLAG PARA INTERROMPER A EXECUCAO DO LOOP DOS PROCESSOS ESCRAVOS
         int continua   = 1;
+        int tam;
         while(continua == 1){
             pos=1;
             posicaoEnviado = 1;
 
             if (verificou == 0){
+              ierr = MPI_Recv( &tam, 1, MPI_INT, proc_raiz, envio_tamanho, MPI_COMM_WORLD, &status);
               //Recebendo o tamanho do vetor de ENVIADOS
               ierr = MPI_Recv( &ult_enviado, 1, MPI_INT, proc_raiz, envio_tamanho, MPI_COMM_WORLD, &status);
 
               //RECEBENDO OS NÚMEROS QUE ESTÃO SENDO DIVIDIDOS NOS OUTROS PROCESSOS
               ierr = MPI_Recv( &vetNumerosEnviados[0], ult_enviado, MPI_INT, proc_raiz, envio_vetor, MPI_COMM_WORLD, &status);
             }
+
+            //printf("%d TAMANHO DESSA DESGRAÇA \n", tam );
 
             //Recebendo os números do processo Raiz para testar
             ierr = MPI_Recv( &num_teste, 1, MPI_INT, proc_raiz, envio_prox_num, MPI_COMM_WORLD, &status);
@@ -203,28 +210,32 @@ main(int argc, char **argv){
             }
             //printf("Recebido o valor %i no processo %i\n", num_teste, my_id);
             int primo = 0; //Inicialmente todos os números são primos
+            if (num_teste <= tam){
             //if(num_teste < (num_procs-1)){ //Neste caso faremos o teste para o número primo com
-            if (verificou == 0) {                               //todos os números menores que ele
+              if (verificou == 0) {                               //todos os números menores que ele
 
-                for ( pos = 0; pos < ult_enviado; pos++){ //Rotina para testar se o número é primo ou não com os numeros que estão no outro processo
-                  if (vetNumerosEnviados[pos] < num_teste){
-                    if((num_teste % vetNumerosEnviados[pos])==0) primo=1; // Se der resto 0 não é primo
+                  for ( pos = 0; pos < ult_enviado; pos++){ //Rotina para testar se o número é primo ou não com os numeros que estão no outro processo
+                    if (vetNumerosEnviados[pos] < num_teste){
+                      if((num_teste % vetNumerosEnviados[pos])==0) primo=1; // Se der resto 0 não é primo
+                    }
+                  }
+                  verificou = 1;
+          //        for(pos=2;pos<num_teste;pos++)
+          //            if((num_teste % pos)==0) primo=1;
+              }else{
+                for (pos = 0; pos < contaPrimo; pos ++){
+                  if(primos[pos] > 0){
+                    if((num_teste % primos[pos])==0) primo=1; // Se der resto 0 não é primo
                   }
                 }
-                verificou = 1;
-        //        for(pos=2;pos<num_teste;pos++)
-        //            if((num_teste % pos)==0) primo=1;
-            }else{
-              for (pos = 0; pos < contaPrimo; pos ++){
-                if(primos[pos] > 0){
-                  if((num_teste % primos[pos])==0) primo=1; // Se der resto 0 não é primo
-                }
+              //    while(primos[pos]!=0){ //Rotina para testar se o número é primo ou não
+              //        if((num_teste % primos[pos])==0) primo=1; // Se der resto 0 não é primo
+              //        pos++;
+              //    }
               }
-            //    while(primos[pos]!=0){ //Rotina para testar se o número é primo ou não
-            //        if((num_teste % primos[pos])==0) primo=1; // Se der resto 0 não é primo
-            //        pos++;
-            //    }
-            }
+          } else {
+            primo = 1;
+          }
 
             if(primo==1){
               num_teste = 0; // O número não é primo, portanto retornarei 0
